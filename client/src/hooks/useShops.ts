@@ -47,6 +47,12 @@ export function useShops() {
     setShops((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
+  const toggleCheckIn = useCallback(async (id: number) => {
+    const { shop } = await shopsApi.toggleCheckIn(id);
+    setShops((prev) => prev.map((s) => (s.id === shop.id ? shop : s)));
+    return shop;
+  }, []);
+
   return {
     shops,
     cities,
@@ -58,5 +64,6 @@ export function useShops() {
     addShop,
     updateShopInList,
     removeShop,
+    toggleCheckIn,
   };
 }

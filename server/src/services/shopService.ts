@@ -155,6 +155,24 @@ export async function updateShop(userId: number, shopId: number, input: UpdateSh
   return formatShop(updated!);
 }
 
+export function toggleCheckIn(userId: number, shopId: number): Shop {
+  const existing = get<Shop>('SELECT * FROM shops WHERE id = ? AND user_id = ?', [shopId, userId]);
+  if (!existing) {
+    throw new Error('NOT_FOUND');
+  }
+
+  const newStatus = existing.is_checked_in ? 0 : 1;
+  const now = new Date().toISOString();
+
+  run(
+    'UPDATE shops SET is_checked_in = ?, updated_at = ? WHERE id = ? AND user_id = ?',
+    [newStatus, now, shopId, userId]
+  );
+
+  const updated = get<Shop>('SELECT * FROM shops WHERE id = ?', [shopId]);
+  return formatShop(updated!);
+}
+
 export function deleteShop(userId: number, shopId: number): void {
   const existing = get<Shop>('SELECT * FROM shops WHERE id = ? AND user_id = ?', [shopId, userId]);
   if (!existing) {

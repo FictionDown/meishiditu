@@ -6,9 +6,10 @@ interface ShopCardProps {
   shop: Shop;
   isSelected: boolean;
   onClick: () => void;
+  onToggleCheckIn: () => void;
 }
 
-export default function ShopCard({ shop, isSelected, onClick }: ShopCardProps) {
+export default function ShopCard({ shop, isSelected, onClick, onToggleCheckIn }: ShopCardProps) {
   // Defensive: ensure shop has all required fields
   if (!shop) return null;
 
@@ -55,6 +56,21 @@ export default function ShopCard({ shop, isSelected, onClick }: ShopCardProps) {
         {shop.notes && (
           <p className="text-xs text-gray-400 mt-0.5 truncate">{truncateText(shop.notes, 25)}</p>
         )}
+        {/* Check-in badge / button */}
+        <div className="mt-1">
+          {shop.is_checked_in ? (
+            <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 border border-green-200">
+              ✅ 已打卡
+            </span>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleCheckIn(); }}
+              className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 hover:bg-green-100 hover:text-green-600 border border-gray-200 hover:border-green-300 transition"
+            >
+              📍 打卡
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

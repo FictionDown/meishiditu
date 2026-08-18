@@ -16,12 +16,23 @@ export interface Shop {
   notes: string;
   images: string[];
   is_shared: number;
+  is_checked_in: number;
   share_id: string;
   created_at: string;
   updated_at: string;
 }
 
-export type Category = 'hotpot' | 'bbq' | 'snack' | 'dessert' | 'coffee' | 'other';
+export type Category = string;
+
+export interface UserCategory {
+  id: number;
+  user_id: number;
+  key: string;
+  label: string;
+  color: string;
+  icon: string;
+  created_at: string;
+}
 
 export interface ShopFilters {
   category: string;

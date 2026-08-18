@@ -5,11 +5,12 @@ interface ShopListProps {
   shops: Shop[];
   selectedShopId: number | null;
   onShopSelect: (shop: Shop) => void;
+  onToggleCheckIn: (id: number) => Promise<void>;
   loading: boolean;
   error?: string;
 }
 
-export default function ShopList({ shops, selectedShopId, onShopSelect, loading, error }: ShopListProps) {
+export default function ShopList({ shops, selectedShopId, onShopSelect, onToggleCheckIn, loading, error }: ShopListProps) {
   if (loading) {
     return (
       <div className="p-4 space-y-3">
@@ -62,6 +63,7 @@ export default function ShopList({ shops, selectedShopId, onShopSelect, loading,
           shop={shop}
           isSelected={shop.id === selectedShopId}
           onClick={() => onShopSelect(shop)}
+          onToggleCheckIn={() => onToggleCheckIn(shop.id)}
         />
       ))}
     </div>

@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import ImageUpload from '../common/ImageUpload';
+import CategoryManager from '../category/CategoryManager';
 import { Shop, Category, ShopFormData } from '../../types';
 import { CATEGORY_OPTIONS } from '../../utils/categories';
 import * as uploadApi from '../../api/upload';
 import { geocodeAddress } from '../../utils/geocode';
+import { searchAddress, AddressSuggestion } from '../../utils/addressSearch';
 
 interface AddEditShopModalProps {
   isOpen: boolean;
@@ -26,6 +29,47 @@ export default function AddEditShopModal({ isOpen, onClose, onSave, initialData 
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedGeo, setSelectedGeo] = useState<{ lat: number; lng: number } | null>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+
+  const handleAddressChange = useCallback((value: string) => {
+    setAddress(value);
+    setSelectedGeo(null); // reset pre-selected coords when user edits
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (value.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    searchTimer.current = setTimeout(async () => {
+      const results = await searchAddress(value.trim());
+      setSuggestions(results);
+      if (results.length > 0 && addressInputRef.current) {
+        const rect = addressInputRef.current.getBoundingClientRect();
+        setDropdownStyle({
+          position: 'fixed',
+          left: rect.left,
+          top: rect.bottom + 4,
+          width: rect.width,
+          zIndex: 9999,
+        });
+        setShowSuggestions(true);
+      } else {
+        setShowSuggestions(false);
+      }
+    }, 300);
+  }, []);
+
+  const selectSuggestion = (s: AddressSuggestion) => {
+    setAddress(s.name + (s.address ? ' ' + s.address : ''));
+    setSelectedGeo({ lat: s.lat, lng: s.lng });
+    setShowSuggestions(false);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -47,6 +91,9 @@ export default function AddEditShopModal({ isOpen, onClose, onSave, initialData 
         setExistingImages([]);
       }
       setError('');
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setSelectedGeo(null);
     }
   }, [isOpen, initialData]);
 
@@ -59,15 +106,20 @@ export default function AddEditShopModal({ isOpen, onClose, onSave, initialData 
 
     setLoading(true);
     try {
-      // Geocode address to get lat/lng
-      const geo = await geocodeAddress(address.trim());
-      if (!geo.ok) {
-        const proceed = window.confirm(
-          `无法定位该店铺的详细位置。\n\n原因：${geo.error}\n\n是否仍然添加该店铺？（店铺将不会在地图上显示位置）`
-        );
-        if (!proceed) {
-          setLoading(false);
-          return;
+      // Use pre-selected coords if user picked from address suggestions
+      let geo: { lat: number; lng: number } | null = selectedGeo;
+      if (!geo) {
+        const result = await geocodeAddress(address.trim());
+        if (!result.ok) {
+          const proceed = window.confirm(
+            `无法定位该店铺的详细位置。\n\n原因：${result.error}\n\n是否仍然添加该店铺？（店铺将不会在地图上显示位置）`
+          );
+          if (!proceed) {
+            setLoading(false);
+            return;
+          }
+        } else {
+          geo = result;
         }
       }
 
@@ -94,7 +146,7 @@ export default function AddEditShopModal({ isOpen, onClose, onSave, initialData 
         notes: notes.trim(),
         images,
         existingImages: allImages,
-        ...(geo.ok ? { lat: geo.lat, lng: geo.lng } : {}),
+        ...(geo ? { lat: geo.lat, lng: geo.lng } : {}),
       });
 
       onClose();
@@ -107,6 +159,7 @@ export default function AddEditShopModal({ isOpen, onClose, onSave, initialData 
   };
 
   return (
+    <>
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? '编辑店铺' : '添加店铺'} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name */}
@@ -129,14 +182,52 @@ export default function AddEditShopModal({ isOpen, onClose, onSave, initialData 
           <label className="block text-sm font-medium text-gray-700 mb-1">
             详细地址 <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="如：北京市朝阳区建国路88号"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
-            maxLength={200}
-          />
+          <div className="relative">
+            <input
+              ref={addressInputRef}
+              type="text"
+              value={address}
+              onChange={(e) => handleAddressChange(e.target.value)}
+              onFocus={() => { if (suggestions.length > 0 && addressInputRef.current) {
+                const rect = addressInputRef.current.getBoundingClientRect();
+                setDropdownStyle({
+                  position: 'fixed',
+                  left: rect.left,
+                  top: rect.bottom + 4,
+                  width: rect.width,
+                  zIndex: 9999,
+                });
+                setShowSuggestions(true);
+              }}}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              placeholder="输入地址搜索，如：北京市朝阳区建国路88号"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
+              maxLength={200}
+            />
+            {selectedGeo && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-green-500">✓ 已定位</span>
+            )}
+            {showSuggestions && suggestions.length > 0 &&
+              createPortal(
+                <div className="bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto" style={dropdownStyle}>
+                  {suggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s); }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="text-sm font-medium text-gray-900">{s.name}</div>
+                      {s.address && (
+                        <div className="text-xs text-gray-500 mt-0.5 truncate">{s.district}{s.address}</div>
+                      )}
+                    </button>
+                  ))}
+                </div>,
+                document.body
+              )
+            }
+          </div>
         </div>
 
         {/* Category */}
@@ -163,6 +254,13 @@ export default function AddEditShopModal({ isOpen, onClose, onSave, initialData 
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={() => setShowCategoryManager(true)}
+            className="mt-1 text-xs text-primary-500 hover:text-primary-600 transition"
+          >
+            + 管理分类
+          </button>
         </div>
 
         {/* Meituan URL */}
@@ -219,5 +317,11 @@ export default function AddEditShopModal({ isOpen, onClose, onSave, initialData 
         </div>
       </form>
     </Modal>
+
+    <CategoryManager
+      isOpen={showCategoryManager}
+      onClose={() => setShowCategoryManager(false)}
+    />
+    </>
   );
 }

@@ -10,6 +10,8 @@ import shopRoutes from './routes/shops';
 import shareRoutes from './routes/share';
 import uploadRoutes from './routes/upload';
 import geocodeRoutes from './routes/geocode';
+import categoryRoutes from './routes/categories';
+import addressRoutes from './routes/address';
 
 async function bootstrap() {
   // Initialize database and run migrations
@@ -36,6 +38,8 @@ async function bootstrap() {
   app.use('/api/share', shareRoutes);
   app.use('/api/upload', uploadRoutes);
 app.use('/api/geocode', geocodeRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/address', addressRoutes);
 
   // Error handler
   app.use(errorHandler);

@@ -24,6 +24,7 @@ export interface Shop {
   notes: string;
   images: string; // JSON array
   is_shared: number; // 0 or 1
+  is_checked_in: number; // 0 or 1
   share_id: string | null;
   created_at: string;
   updated_at: string;
@@ -58,9 +59,9 @@ export interface UpdateShopInput {
   lng?: number;
 }
 
-export type Category = 'hotpot' | 'bbq' | 'snack' | 'dessert' | 'coffee' | 'other';
+export type Category = string;
 
-export const CATEGORIES: Record<Category, string> = {
+export const DEFAULT_CATEGORIES: Record<string, string> = {
   hotpot: '火锅',
   bbq: '烧烤',
   snack: '小吃',
@@ -68,3 +69,23 @@ export const CATEGORIES: Record<Category, string> = {
   coffee: '咖啡',
   other: '其他',
 };
+
+export interface UserCategory {
+  id: number;
+  user_id: number;
+  key: string;
+  label: string;
+  color: string;
+  icon: string;
+  created_at: string;
+}
+
+export interface CreateCategoryInput {
+  label: string;
+}
+
+export interface UpdateCategoryInput {
+  label?: string;
+  color?: string;
+  icon?: string;
+}

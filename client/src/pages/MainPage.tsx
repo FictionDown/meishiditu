@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useShops } from '../hooks/useShops';
+import { useCategories } from '../hooks/useCategories';
 import { useToast } from '../components/common/Toast';
 import ProtectedRoute from '../components/common/ProtectedRoute';
 import ErrorBoundary from '../components/common/ErrorBoundary';
@@ -51,7 +52,10 @@ function MainPageContent() {
     addShop,
     updateShopInList,
     removeShop,
+    toggleCheckIn,
   } = useShops();
+
+  useCategories();
 
   const { showToast } = useToast();
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
@@ -171,6 +175,7 @@ function MainPageContent() {
               shops={shops}
               selectedShopId={selectedShop?.id || null}
               onShopSelect={handleShopSelect}
+              onToggleCheckIn={toggleCheckIn}
               loading={loading}
               error={error}
             />
@@ -194,6 +199,10 @@ function MainPageContent() {
               shop={selectedShop}
               onEdit={openEditModal}
               onDelete={handleDeleteShop}
+              onToggleCheckIn={async (id) => {
+                const shop = await toggleCheckIn(id);
+                if (shop) setSelectedShop(shop);
+              }}
               onClose={() => { setDetailVisible(false); setSelectedShop(null); }}
             />
           </div>

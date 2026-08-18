@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Shop } from '../../types';
 import { CATEGORIES } from '../../utils/categories';
 import { formatDate } from '../../utils/format';
@@ -10,13 +10,52 @@ interface ShopDetailPanelProps {
   shop: Shop;
   onEdit: (shop: Shop) => void;
   onDelete: (shopId: number) => void;
+  onToggleCheckIn: (id: number) => Promise<void>;
   onClose: () => void;
 }
 
-export default function ShopDetailPanel({ shop, onEdit, onDelete, onClose }: ShopDetailPanelProps) {
+export default function ShopDetailPanel({ shop, onEdit, onDelete, onToggleCheckIn, onClose }: ShopDetailPanelProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const cat = CATEGORIES[shop.category] || CATEGORIES.other;
+
+  const images = shop.images || [];
+  const hasImages = images.length > 0;
+  const hasMultipleImages = images.length > 1;
+
+  // Reset image index when shop changes
+  useEffect(() => {
+    setCurrentImageIndex(0);
+    setLightboxOpen(false);
+  }, [shop.id]);
+
+  const goToPrev = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  }, [images.length]);
+
+  const goToNext = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  }, [images.length]);
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxOpen(false);
+      if (e.key === 'ArrowLeft') setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+      if (e.key === 'ArrowRight') setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+    };
+    document.addEventListener('keydown', handleKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = '';
+    };
+  }, [lightboxOpen, images.length]);
 
   const handleShare = async () => {
     setSharing(true);
@@ -54,10 +93,56 @@ export default function ShopDetailPanel({ shop, onEdit, onDelete, onClose }: Sho
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Image */}
-        <div className="h-48 bg-gray-100">
-          {shop.images?.[0] ? (
-            <img src={shop.images[0]} alt={shop.name} className="w-full h-full object-cover" />
+        {/* Image Carousel */}
+        <div className="relative h-48 bg-gray-100 group">
+          {hasImages ? (
+            <>
+              <img
+                src={images[currentImageIndex]}
+                alt={`${shop.name} - ${currentImageIndex + 1}`}
+                className="w-full h-full object-cover cursor-zoom-in"
+                onClick={() => setLightboxOpen(true)}
+              />
+              {/* Image counter */}
+              {hasMultipleImages && (
+                <span className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                  {currentImageIndex + 1} / {images.length}
+                </span>
+              )}
+              {/* Prev/Next arrows */}
+              {hasMultipleImages && (
+                <>
+                  <button
+                    onClick={goToPrev}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/60 transition-opacity"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    onClick={goToNext}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/60 transition-opacity"
+                  >
+                    ›
+                  </button>
+                </>
+              )}
+              {/* Dot indicators */}
+              {hasMultipleImages && (
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {images.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(i); }}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        i === currentImageIndex
+                          ? 'bg-white scale-110'
+                          : 'bg-white/50 hover:bg-white/80'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-6xl">
               {cat.icon}
@@ -117,6 +202,18 @@ export default function ShopDetailPanel({ shop, onEdit, onDelete, onClose }: Sho
 
       {/* Actions */}
       <div className="p-4 border-t border-gray-100 space-y-2">
+        {/* Check-in button */}
+        <button
+          onClick={() => onToggleCheckIn(shop.id)}
+          className={`w-full text-sm py-2 rounded-lg font-medium transition ${
+            shop.is_checked_in
+              ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+              : 'bg-primary-500 text-white hover:bg-primary-600'
+          }`}
+        >
+          {shop.is_checked_in ? '✅ 已打卡（点击取消）' : '📍 打卡'}
+        </button>
+
         <div className="grid grid-cols-2 gap-2">
           <Button onClick={handleNavigate} size="sm">
             🧭 导航
@@ -164,6 +261,74 @@ export default function ShopDetailPanel({ shop, onEdit, onDelete, onClose }: Sho
           )}
         </div>
       </div>
+
+      {/* Lightbox */}
+      {lightboxOpen && hasImages && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center"
+          onClick={() => setLightboxOpen(false)}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-xl hover:bg-white/20 transition z-10"
+          >
+            ✕
+          </button>
+
+          {/* Image counter */}
+          {hasMultipleImages && (
+            <span className="absolute top-4 left-4 bg-black/50 text-white text-sm px-3 py-1 rounded-full z-10">
+              {currentImageIndex + 1} / {images.length}
+            </span>
+          )}
+
+          {/* Prev button */}
+          {hasMultipleImages && (
+            <button
+              onClick={(e) => { e.stopPropagation(); goToPrev(e); }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center text-2xl hover:bg-white/20 transition z-10"
+            >
+              ‹
+            </button>
+          )}
+
+          {/* Full image */}
+          <img
+            src={images[currentImageIndex]}
+            alt={`${shop.name} - ${currentImageIndex + 1}`}
+            className="max-w-[90vw] max-h-[90vh] object-contain select-none"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Next button */}
+          {hasMultipleImages && (
+            <button
+              onClick={(e) => { e.stopPropagation(); goToNext(e); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center text-2xl hover:bg-white/20 transition z-10"
+            >
+              ›
+            </button>
+          )}
+
+          {/* Dot indicators */}
+          {hasMultipleImages && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+              {images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(i); }}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${
+                    i === currentImageIndex
+                      ? 'bg-white scale-110'
+                      : 'bg-white/40 hover:bg-white/70'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

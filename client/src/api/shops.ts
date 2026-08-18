@@ -45,6 +45,11 @@ export async function updateShop(id: number, shopData: {
   return data;
 }
 
+export async function toggleCheckIn(id: number): Promise<{ shop: Shop }> {
+  const { data } = await apiClient.patch(`/shops/${id}/checkin`);
+  return data;
+}
+
 export async function deleteShop(id: number): Promise<void> {
   await apiClient.delete(`/shops/${id}`);
 }

@@ -1,7 +1,8 @@
 import { Router, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import * as shopService from '../services/shopService';
-import { AuthRequest, CATEGORIES } from '../types';
+import * as categoryService from '../services/categoryService';
+import { AuthRequest } from '../types';
 
 const router = Router();
 
@@ -51,7 +52,8 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       res.status(400).json({ error: '店铺地址不能为空' });
       return;
     }
-    if (category && !CATEGORIES[category as keyof typeof CATEGORIES]) {
+    const validCategories = categoryService.getCategoryMap(req.userId!);
+    if (category && !validCategories[category]) {
       res.status(400).json({ error: '无效的分类' });
       return;
     }
@@ -78,7 +80,8 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     const shopId = parseInt(req.params.id);
     const { name, address, category, meituan_url, notes, images, is_shared } = req.body;
 
-    if (category && !CATEGORIES[category as keyof typeof CATEGORIES]) {
+    const validCategories = categoryService.getCategoryMap(req.userId!);
+    if (category && !validCategories[category]) {
       res.status(400).json({ error: '无效的分类' });
       return;
     }
@@ -101,6 +104,22 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     }
     console.error('Update shop error:', err);
     res.status(500).json({ error: '更新店铺失败' });
+  }
+});
+
+// PATCH /api/shops/:id/checkin — toggle check-in status
+router.patch('/:id/checkin', (req: AuthRequest, res: Response) => {
+  try {
+    const shopId = parseInt(req.params.id);
+    const shop = shopService.toggleCheckIn(req.userId!, shopId);
+    res.json({ shop });
+  } catch (err: any) {
+    if (err.message === 'NOT_FOUND') {
+      res.status(404).json({ error: '店铺不存在' });
+      return;
+    }
+    console.error('Toggle checkin error:', err);
+    res.status(500).json({ error: '打卡操作失败' });
   }
 });
 

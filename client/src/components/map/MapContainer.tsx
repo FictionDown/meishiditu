@@ -38,7 +38,7 @@ export default function MapContainer({
     AMapLoader.load({
       key: amapKey,
       version: '2.0',
-      plugins: ['AMap.Geocoder'],
+      plugins: ['AMap.Geocoder', 'AMap.AutoComplete', 'AMap.PlaceSearch'],
     })
       .then((AMap: any) => {
         if (cancelled || !mapContainerRef.current) return;
@@ -97,20 +97,25 @@ export default function MapContainer({
 
       const cat = CATEGORIES[shop.category] || CATEGORIES.other;
       const isSelected = shop.id === selectedShopId;
+      const isCheckedIn = shop.is_checked_in;
       const size = isSelected ? 44 : 36;
+      const borderColor = isCheckedIn ? '#22c55e' : 'white';
 
       const markerContent = document.createElement('div');
       markerContent.innerHTML = `
         <div style="
           width:${size}px;height:${size}px;
           background:${cat.color};
-          border:3px solid white;
+          border:3px solid ${borderColor};
           border-radius:50%;
           box-shadow:0 2px 8px rgba(0,0,0,0.3);
           display:flex;align-items:center;justify-content:center;
           font-size:${isSelected ? '22px' : '18px'};
           cursor:pointer;
-        ">${cat.icon}</div>
+          position:relative;
+        ">${cat.icon}${
+          isCheckedIn ? '<span style="position:absolute;bottom:-2px;right:-2px;font-size:10px;">✅</span>' : ''
+        }</div>
       `;
 
       const marker = new AMap.Marker({

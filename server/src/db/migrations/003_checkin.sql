@@ -1,0 +1,1 @@
+ALTER TABLE shops ADD COLUMN is_checked_in INTEGER DEFAULT 0;
