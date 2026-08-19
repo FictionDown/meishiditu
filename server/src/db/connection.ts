@@ -5,8 +5,8 @@ import { config } from '../config';
 
 let db: SqlJsDatabase | null = null;
 
-// Ensure data directory exists
-const dataDir = path.join(__dirname, '..', '..', 'data');
+// Ensure data directory exists (uses /tmp on Vercel via config.dbPath)
+const dataDir = path.dirname(config.dbPath);
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
