@@ -175,7 +175,7 @@ function MainPageContent() {
               shops={shops}
               selectedShopId={selectedShop?.id || null}
               onShopSelect={handleShopSelect}
-              onToggleCheckIn={toggleCheckIn}
+              onToggleCheckIn={async (id) => { await toggleCheckIn(id); }}
               loading={loading}
               error={error}
             />
