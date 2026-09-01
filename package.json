@@ -2,6 +2,9 @@
   "name": "meishiditu",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "description": "全国美食地图 - 我的全国探店收藏地图",
   "workspaces": ["server", "client"],
   "scripts": {

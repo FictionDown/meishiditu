@@ -12,3 +12,4 @@ server/uploads/*
 .env.local
 .DS_Store
 *.log
+*.tsbuildinfo
