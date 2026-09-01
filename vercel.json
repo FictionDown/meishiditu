@@ -11,9 +11,10 @@
       "includeFiles": "node_modules/sql.js/**"
     }
   },
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/server" },
-    { "source": "/uploads/:path*", "destination": "/api/server" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/api/(.*)", "dest": "/api/server" },
+    { "src": "/uploads/(.*)", "dest": "/api/server" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

@@ -1,8 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+const useGithubPagesBase =
+  process.env.GITHUB_PAGES === 'true' && !process.env.VERCEL;
+
 export default defineConfig({
-  base: process.env.GITHUB_PAGES === 'true' ? '/meishiditu/' : '/',
+  base: useGithubPagesBase ? '/meishiditu/' : '/',
   plugins: [react()],
   server: {
     port: 5173,

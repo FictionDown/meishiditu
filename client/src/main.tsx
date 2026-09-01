@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import './index.css';
 
 // 高德地图安全密钥 — 2021年12月后申请的Key必须配置
@@ -16,10 +17,16 @@ if (securityCode) {
   console.warn('[AMap] No security code set — geocoding may fail');
 }
 
+const baseUrl = import.meta.env.BASE_URL;
+const routerBasename =
+  baseUrl && baseUrl !== '/' ? baseUrl.replace(/\/$/, '') : undefined;
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined}>
-      <App />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter basename={routerBasename}>
+        <App />
+      </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>
 );
