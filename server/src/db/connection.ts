@@ -11,10 +11,20 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
+async function initDatabaseEngine() {
+  if (process.env.VERCEL) {
+    const sqlJsRoot = path.dirname(require.resolve('sql.js/package.json'));
+    return initSqlJs({
+      locateFile: (file) => path.join(sqlJsRoot, 'dist', file),
+    });
+  }
+  return initSqlJs();
+}
+
 export async function getDb(): Promise<SqlJsDatabase> {
   if (db) return db;
 
-  const SQL = await initSqlJs();
+  const SQL = await initDatabaseEngine();
   const dbPath = config.dbPath;
 
   if (fs.existsSync(dbPath)) {

@@ -1,3 +1,4 @@
-import { createApp } from '../server/src/index';
+import { createApp } from '../server/dist/index';
 
-export default createApp();
+const app = createApp();
+export default app;
